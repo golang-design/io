@@ -472,3 +472,28 @@ func TestCopyLargeWriter(t *testing.T) {
 		t.Errorf("Copy error: got %v, want %v", err, want)
 	}
 }
+
+type shortWriter struct {
+	written []byte
+}
+
+func (w *shortWriter) Write(b []byte) (int, error) {
+	if len(b) == 0 {
+		return 0, nil
+	}
+	w.written = append(w.written, b[0])
+	return 1, nil
+}
+
+func TestCopyShortWriter(t *testing.T) { // For Issue 49474
+	want := "hello, world."
+	rb := new(Buffer)
+	wb := &shortWriter{}
+	rb.WriteString(want)
+	if _, err := Copy(wb, rb); err != nil {
+		t.Errorf("Copy error: expect success, but failed with error: %v", err)
+	}
+	if string(wb.written) != want {
+		t.Errorf("Copy error: got %v, want %v", string(wb.written), want)
+	}
+}

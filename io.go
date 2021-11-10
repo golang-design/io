@@ -426,21 +426,25 @@ func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
 	for {
 		nr, er := src.Read(buf)
 		if nr > 0 {
-			nw, ew := dst.Write(buf[0:nr])
-			if nw < 0 || nr < nw {
-				nw = 0
-				if ew == nil {
-					ew = errInvalidWrite
+
+			for n := 0; n != nr; {
+				nw, ew := dst.Write(buf[n:nr])
+				if nw < 0 || nr < nw {
+					nw = 0
+					if ew == nil {
+						ew = errInvalidWrite
+					}
 				}
-			}
-			written += int64(nw)
-			if ew != nil {
-				err = ew
-				break
-			}
-			if nr != nw {
-				err = ErrShortWrite
-				break
+				written += int64(nw)
+				if ew != nil {
+					err = ew
+					goto done
+				}
+				if nr != nw && nr == 0 {
+					err = ErrShortWrite
+					goto done
+				}
+				n += nw
 			}
 		}
 		if er != nil {
@@ -450,6 +454,7 @@ func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
 			break
 		}
 	}
+done:
 	return written, err
 }
 
